@@ -2,6 +2,6 @@ scipy
 flask
 pandas
 gunicorn
-bokeh
+bokeh=2.1.0
 numpy
 alpha_vantage
