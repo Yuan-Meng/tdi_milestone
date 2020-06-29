@@ -2,6 +2,7 @@
 
 # Flask libraries 
 from flask import Flask, render_template, request, redirect
+from werkzeug.exceptions import HTTPException
 
 # Data accessing 
 from alpha_vantage.timeseries import TimeSeries
@@ -115,7 +116,7 @@ def create_figure(stock, prices):
 
     return fig 
 
-### Build Flask app 
+### 3. Build Flask app 
 
 # Initialize the Flask app
 app = Flask(__name__, template_folder="templates")
@@ -130,20 +131,35 @@ def index():
         return render_template('Search.html')
         
     else:
-        # request.method == 'POST'
+        # Get ticker symbol from user input
         app.vars['symbol'] = request.form['ticker']
 
+        # Use ticker to look up stock prices
         stock, prices = get_monthly_closing(app.vars['symbol'])
         
+        # Generate plot
         plot = create_figure(stock, prices)
 
+        # Get separate splot components
         script, div = components(plot)  
 
+        # Render plot or show error message
         return render_template('Plot.html', script=script, div=div)
-       
+
+# Redirect to home page       
 @app.route('/', methods=['GET','POST'])
 def main():
-    return redirect('/index')
+    return redirect('/index') 
+
+# In case ticker is not found
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # Pass through HTTP errors
+    if isinstance(e, HTTPException):
+        return e
+        
+    # Render custom error page
+    return render_template("Error.html", e=e), 500     
 
 if __name__== "__main__":
 
