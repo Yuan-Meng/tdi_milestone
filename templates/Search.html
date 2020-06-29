@@ -1,17 +1,33 @@
 <!doctype html>
-<title>Stock Ticker Milestone</title>
-<link rel=stylesheet type=text/css href='{{ url_for('static',filename='mystyle.css')}}'>
-<div class=page>
-  <h1>Stock Ticker</h1>
+<html>
+  <head>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400&display=swap" 
+          rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Fira Code', monospace;
+        margin: auto;
+        width: 50%;
+      }
 
-  <div class=metanav>
+      .result {
+      border: 2px solid #ccc; 
+      }
+    </style>
+  </head>
 
-    Please enter a stock ticker, e.g. FB, AAPL, GOOG
+  <body>
+    <title>Stock Price Lookup</title>
+    <div class=page>
+    <h1>Stock Price Lookup</h1>
+    <div class=metanav>
+
+    Please enter a ticker symbol (e.g. TSLA, AAPL, GOOG) to look up monthly closing prices of a stock (<a href="https://finance.yahoo.com/lookup/">Yahoo! Finance symbol lookup</a>):
 
     <h4>
       <form id='input' method='post' action='index' >
         <p>
-          Ticker Symbol: <input type='text' name='ticker' />  
+          Ticker symbol: <input type='text' name='ticker' />  
           
         </p>
 
@@ -20,5 +36,9 @@
         </p>
       </form>
     </h4>
+
+
   </div>
 </div>
+  </body>
+</html>

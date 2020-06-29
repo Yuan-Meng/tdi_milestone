@@ -1,12 +1,11 @@
-### Import libraries 
+### 1. Import libraries 
 
 # Flask libraries 
-from flask import Flask, render_template,request,redirect
+from flask import Flask, render_template, request, redirect
 
 # Data accessing 
-import requests
-import io
 from alpha_vantage.timeseries import TimeSeries
+import pickle
 
 # Data handling 
 import numpy as np
@@ -14,30 +13,17 @@ import pandas as pd
 pd.options.mode.chained_assignment = None
 from datetime import datetime
 from dateutil.parser import parse
+import math
 
 # Bokeh libraries 
-from bokeh.io import curdoc
-from bokeh.layouts import row, column, gridplot
 from bokeh.models import ColumnDataSource
-from bokeh.models.widgets import PreText, Select
 from bokeh.plotting import figure, show, output_file
-from bokeh.embed import components,file_html
+from bokeh.embed import components, file_html
 
-# Other libraries 
-import time
-import os
-from os.path import dirname, join 
-
-### Flask app 
-
-# Initialize the Flask app
-app = Flask(__name__)
-app.vars={}
+### 2. Get data
 
 # Get stock data from Alpha Advantage
-
 def get_monthly_closing(ticker):
-    """Obtaining and cleaning monthly closing prices of a given stock"""
 
     # Credentials
     key = "KE59ELWQ1XLDO5ZR"
@@ -63,37 +49,79 @@ def get_monthly_closing(ticker):
     prices["date"] = prices["date"].apply(lambda x: parse(str(x)))
 
     # Return ticker and stock data
-    return prices
+    return ticker, prices
 
-def get_feature(ticker):
-    mydata = get_monthly_closing(ticker)
-    feature = mydata.columns[0:-1].values.tolist()
-    return feature
+# Load ticker lookup table
+with open("data/lookup.pkl", "rb") as file:
+    lookup = pickle.load(file)  
 
-# feature_names = mydata.columns[1:-1].values.tolist()
-def create_figure(mydata, current_feature_name):
-    ticker = np.array(mydata[current_feature_name])
-    ticker_dates = np.array(mydata['date'])
+# Get company name from ticker
+def get_name(ticker):
+    ticker = ticker.upper()
+    company = lookup.loc[lookup["Ticker"] == ticker, "Name"].item()
+    return company  
 
-    window_size = 30
-    window = np.ones(window_size)/float(window_size)
-    ticker_avg = np.convolve(ticker, window, 'same')
+# Plot with Bokeh 
+def create_figure(stock, prices):
 
-    p = figure(x_axis_type="datetime", title="%s Monthly Closing Prices" % current_feature_name)
-    p.grid.grid_line_alpha = 0
-    p.xaxis.axis_label = 'Date'
-    p.yaxis.axis_label = '%s Price' % current_feature_name
-    p.ygrid.band_fill_color = "green"
-    p.ygrid.band_fill_alpha = 0.1
+    # Prepare data for plotting
+    prices_cds = ColumnDataSource(prices)
 
-    p.circle(ticker_dates, ticker, size=4, legend='%s' % current_feature_name,
-              color='darkgrey', alpha=0.2)
+    # Upper limit of y-axis
+    max_close = (  
+        math.floor(
+            max(prices["monthly_close"].max(), prices["monthly_close_adjusted"].max())
+        )
+        + 100  # Leave some space above
+    )
 
-    p.line(ticker_dates, ticker_avg, legend='avg', color='navy')
-    p.legend.location = "top_left"
-    return p
+    # Company name
+    company = get_name(stock.upper())  # Company name
+    
+    # Create an empty canvas
+    fig = figure(
+        title=f"Monthly Closing Prices of {stock.upper()} ({company})",
+        plot_height=400,
+        plot_width=700,
+        x_axis_type="datetime",
+        x_axis_label="Date",
+        y_axis_label="Price (USD)",
+        x_minor_ticks=2,
+        y_range=(0, max_close),
+    )
 
+    # Add monthly closing prices
+    fig.line(
+        x="date",
+        y="monthly_close",
+        source=prices_cds,
+        color="gray",
+        line_width=1,
+        legend_label="Unadjusted",
+    )
 
+    # Add adjusted monthly closing prices
+    fig.line(
+        x="date",
+        y="monthly_close_adjusted",
+        source=prices_cds,
+        color="blue",
+        line_width=1,
+        legend_label="Adjusted",
+    )
+
+    # Put the legend in the upper left corner
+    fig.legend.location = "top_left"
+
+    return fig 
+
+### Build Flask app 
+
+# Initialize the Flask app
+app = Flask(__name__, template_folder="templates")
+app.vars={}
+
+# Set up the main route
 @app.route("/index", methods=['GET','POST'])    
 
 def index():
@@ -102,20 +130,15 @@ def index():
         return render_template('Search.html')
         
     else:
-        #request was a POST
+        # request.method == 'POST'
         app.vars['symbol'] = request.form['ticker']
-        mydata = get_monthly_closing(app.vars['symbol'])
 
-        feature_names = get_feature(app.vars['symbol'])
-
-        current_feature_name = request.args.get("feature_name")
-
-        if current_feature_name == None:
-            current_feature_name = "monthly_close"
+        stock, prices = get_monthly_closing(app.vars['symbol'])
         
-        plot = create_figure(mydata, current_feature_name)
+        plot = create_figure(stock, prices)
 
-        script, div = components(plot)       
+        script, div = components(plot)  
+
         return render_template('Plot.html', script=script, div=div)
        
 @app.route('/', methods=['GET','POST'])
