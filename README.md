@@ -1,0 +1,3 @@
+In this mini-project, I'm using Bokeh to visualize monthly closing prices of stocks users inquire about. Stock data is taken from Alpha Vantage, a leading stock API provider. To inquire about a stock, all you need is to enter a ticker symbol (e.g., \"APPL\", \"GOOG\") for a company (e.g., Apple, Google). A line plot will show how the closing price of the said stock changes from month to month. Users can view both adjusted (closing price - dividend per share) or unadjusted prices — in some cases these two are almost identical.
+
+You can find the web app [here](https://stock-ticker-lookup.herokuapp.com/) (built with Flask, deployed on Heroku).

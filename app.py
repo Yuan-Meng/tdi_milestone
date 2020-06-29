@@ -7,7 +7,7 @@ from flask import Flask, render_template, request, redirect
 from alpha_vantage.timeseries import TimeSeries
 import pickle
 
-# Data handling 
+# Data manipulating
 import numpy as np
 import pandas as pd
 pd.options.mode.chained_assignment = None
